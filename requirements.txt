@@ -1,0 +1,2 @@
+# Tkinter is part of the standard library on Fedora via python3-tkinter package
+# No PyPI dependencies required
