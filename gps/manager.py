@@ -78,6 +78,7 @@ class ProfileManager:
         profile = self.get_profile(profile_id)
         if not profile:
             return None
+        old_alias = profile.alias
         if name is not None:
             profile.name = name.strip()
         if email is not None:
@@ -88,11 +89,24 @@ class ProfileManager:
             new_alias = self._ensure_unique_alias(slugify(alias), exclude_id=profile_id)
             if new_alias != profile.alias:
                 remove_block_in_ssh_config(profile.alias)
+                # Remove old git alias
+                try:
+                    subprocess.run(["git", "config", "--global", "--unset", f"alias.{old_alias}"], check=False)
+                except Exception:
+                    pass
                 profile.alias = new_alias
         self._persist()
         # Re-sync SSH block for updated alias/host
         if os.path.exists(profile.ssh_key_path):
             self._write_ssh_config_block(profile)
+        # If this profile is currently active, update the git alias
+        active_id = self.get_active_profile_id()
+        if active_id == profile_id:
+            try:
+                alias_command = f"!echo 'Active profile: {profile.name} ({profile.email}) - SSH alias: {profile.alias}'"
+                subprocess.run(["git", "config", "--global", f"alias.{profile.alias}", alias_command], check=True)
+            except Exception:
+                pass
         return profile
 
     def delete_profile(self, profile_id: str, remove_keys: bool = True) -> bool:
@@ -100,6 +114,11 @@ class ProfileManager:
         if not profile:
             return False
         remove_block_in_ssh_config(profile.alias)
+        # Remove git alias
+        try:
+            subprocess.run(["git", "config", "--global", "--unset", f"alias.{profile.alias}"], check=False)
+        except Exception:
+            pass
         if remove_keys:
             for path in [profile.ssh_key_path, profile.public_key_path]:
                 try:
@@ -169,6 +188,9 @@ class ProfileManager:
             subprocess.run(["git", "config", "--global", "user.name", profile.name], check=True)
             subprocess.run(["git", "config", "--global", "user.email", profile.email], check=True)
             subprocess.run(["git", "config", "--global", "core.sshCommand", ssh_command], check=True)
+            # Create git alias to show active profile
+            alias_command = f"!echo 'Active profile: {profile.name} ({profile.email}) - SSH alias: {profile.alias}'"
+            subprocess.run(["git", "config", "--global", f"alias.{profile.alias}", alias_command], check=True)
         except subprocess.CalledProcessError as exc:
             return False, f"Failed to set active profile: {exc}"
         # Ensure SSH block exists for convenience alias usage
