@@ -1,10 +1,10 @@
 import sys
 
-from gps.gui import run_app
+from gps.cli import run_cli
 
 
 def main() -> None:
-    run_app()
+    run_cli()
 
 
 if __name__ == "__main__":
