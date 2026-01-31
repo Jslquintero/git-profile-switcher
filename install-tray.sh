@@ -18,15 +18,15 @@ echo "Checking for required system packages..."
 if command -v dnf &> /dev/null; then
     echo "Detected Fedora/RHEL system"
     echo "Installing required packages (sudo required)..."
-    sudo dnf install -y python3-pyobject python3-gobject libappindicator-gtk3 python3-tkinter
+    sudo dnf install -y python3-gobject libappindicator-gtk3
 elif command -v apt-get &> /dev/null; then
     echo "Detected Debian/Ubuntu system"
     echo "Installing required packages (sudo required)..."
     sudo apt-get update
-    sudo apt-get install -y python3-gi gir1.2-appindicator3-0.1 python3-tk
+    sudo apt-get install -y python3-gi gir1.2-appindicator3-0.1
 else
     echo "WARNING: Could not detect package manager."
-    echo "Please ensure you have: python3-pyobject, libappindicator-gtk3, and python3-tkinter installed"
+    echo "Please ensure you have: python3-gobject and libappindicator-gtk3 installed"
 fi
 
 # Get the script directory
@@ -41,7 +41,7 @@ chmod +x "$HOME/.local/share/applications/git-profile-switcher-tray.desktop"
 ICON_DIR="$HOME/.local/share/icons/hicolor/scalable/apps"
 mkdir -p "$ICON_DIR"
 
-if [ !f "$ICON_DIR/git-profile-switcher.svg" ]; then
+if [ ! -f "$ICON_DIR/git-profile-switcher.svg" ]; then
     echo "Creating icon..."
     cat > "$ICON_DIR/git-profile-switcher.svg" << 'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -60,7 +60,7 @@ echo ""
 echo "Installation complete!"
 echo ""
 echo "To start the application, run:"
-echo "  python3 main.py --tray"
+echo "  python3 main.py"
 echo ""
 echo "Or launch from your application menu."
 echo ""

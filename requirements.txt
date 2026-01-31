@@ -1,7 +1,7 @@
-# Tkinter is part of the standard library on Fedora via python3-tkinter package
-# No PyPI dependencies required
-
-# For tray icon application (GNOME AppIndicator):
-# These need to be installed via system package manager on Fedora:
-# sudo dnf install -y python3-pyobject python3-pygobject3-devel libappindicator-gtk3
-# (PyGObject provides GTK3 and AppIndicator3 bindings)
+# No PyPI dependencies required — all dependencies are system packages.
+#
+# Install on Fedora:
+#   sudo dnf install -y python3-gobject libappindicator-gtk3
+#
+# Install on Debian/Ubuntu:
+#   sudo apt-get install -y python3-gi gir1.2-appindicator3-0.1

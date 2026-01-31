@@ -1,6 +1,6 @@
-## Git Profile Switcher (GUI)
+## Git Profile Switcher
 
-A simple Tkinter GUI to manage multiple Git profiles on Linux. It lets you:
+A GTK3 application to manage multiple Git profiles on Linux. It lets you:
 
 - Create profiles with name/email and an SSH key
 - Import existing SSH keys from files
@@ -9,43 +9,41 @@ A simple Tkinter GUI to manage multiple Git profiles on Linux. It lets you:
 - Copy the public key to paste into GitHub/GitLab
 - Export SSH private keys to backup or transfer
 - See which profile is currently active
-- **NEW: System tray icon for quick profile switching**
+- System tray icon for quick profile switching
 
-### Requirements (Fedora)
+### Requirements
 
 - Python 3.9+
-- Tkinter
-- PyGObject (for tray icon)
+- PyGObject (GTK3 bindings)
+- AppIndicator3 (system tray support)
 
 Install on Fedora:
 
 ```bash
-sudo dnf install -y python3-tkinter python3-pyobject python3-gobject libappindicator-gtk3
+sudo dnf install -y python3-gobject libappindicator-gtk3
 ```
 
 Install on Debian/Ubuntu:
 
 ```bash
-sudo apt-get install -y python3-tk python3-gi gir1.2-appindicator3-0.1
+sudo apt-get install -y python3-gi gir1.2-appindicator3-0.1
 ```
 
 ### Run
 
-Run the terminal UI (default):
+Launch the system tray icon (default):
 ```bash
 python3 main.py
 ```
 
-Run the GUI window:
+Launch the GTK3 management window:
 ```bash
-python3 -m gps.gui
+python3 main.py --gui
 ```
 
-Run the system tray icon:
+Show help:
 ```bash
-python3 main.py --tray
-# or
-python3 -m gps.tray
+python3 main.py --help
 ```
 
 ### Installing the Tray Application
@@ -65,6 +63,16 @@ To enable autostart on login:
 ```bash
 ln -s ~/.local/share/applications/git-profile-switcher-tray.desktop ~/.config/autostart/
 ```
+
+### RPM Package
+
+Build an RPM package for Fedora/RHEL:
+
+```bash
+./build-rpm.sh
+```
+
+The resulting RPM will be in `~/rpmbuild/RPMS/noarch/`.
 
 ### How it works
 
