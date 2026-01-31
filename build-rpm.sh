@@ -3,7 +3,7 @@
 set -e
 
 NAME="git-profile-switcher"
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 echo "Building ${NAME}-${VERSION} RPM..."
 

@@ -222,12 +222,12 @@ class TrayIcon:
         menu.append(import_item)
 
         # Import from SSH Config
-        import_ssh_item = self._create_menu_item("Import from SSH Config…", "document-open")
+        import_ssh_item = self._create_menu_item("Import from SSH Config", "document-open")
         import_ssh_item.connect("activate", self._on_import_ssh)
         import_menu.append(import_ssh_item)
 
         # Import Git Aliases
-        import_aliases_item = self._create_menu_item("Import Git Aliases…", "document-open")
+        import_aliases_item = self._create_menu_item("Import Git Aliases", "document-open")
         import_aliases_item.connect("activate", self._on_import_aliases)
         import_menu.append(import_aliases_item)
 

@@ -1,10 +1,10 @@
 Name:           git-profile-switcher
-Version:        1.0.0
+Version:        1.1.0
 Release:        1%{?dist}
 Summary:        Manage multiple Git profiles from the system tray
 
 License:        MIT
-URL:            https://github.com/joselopez/git-profile-switcher
+URL:            https://github.com/jslquintero/git-profile-switcher
 Source0:        %{name}-%{version}.tar.gz
 
 BuildArch:      noarch
@@ -63,6 +63,12 @@ fi
 update-desktop-database %{_datadir}/applications &>/dev/null || :
 
 %changelog
+* Sat Jan 31 2026 Jose Lopez <jose@localhost> - 1.1.0-1
+- Theme-aware styling (dark/light mode support)
+- Floating toast notifications
+- Form validation and keyboard accessibility improvements
+- About dialog
+
 * Fri Jan 30 2026 Jose Lopez <jose@localhost> - 1.0.0-1
 - Initial RPM release
 - GTK3 GUI and system tray application

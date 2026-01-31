@@ -56,7 +56,8 @@ class ProfileRow(Gtk.ListBoxRow):
         # Active indicator
         if is_active:
             active_dot = Gtk.Label()
-            active_dot.set_markup("<span foreground='#2eb390'>\u25cf</span> <span size='small'>Active</span>")
+            active_dot.set_markup("\u25cf Active")
+            active_dot.get_style_context().add_class("profile-active-dot")
             top_box.pack_end(active_dot, False, False, 0)
 
         # Email
@@ -71,24 +72,38 @@ class ProfileRow(Gtk.ListBoxRow):
         box.pack_start(details_box, False, False, 0)
 
         # Host
-        host_label = Gtk.Label()
-        host_label.set_markup(f"<span size='small' foreground='#555'>Host:</span> <span size='small'>{GLib.markup_escape_text(profile.host)}</span>")
-        host_label.set_halign(Gtk.Align.START)
-        details_box.pack_start(host_label, False, False, 0)
+        host_prefix = Gtk.Label()
+        host_prefix.set_markup("<span size='small'>Host:</span>")
+        host_prefix.get_style_context().add_class("profile-detail-label")
+        host_value = Gtk.Label()
+        host_value.set_markup(f"<span size='small'>{GLib.markup_escape_text(profile.host)}</span>")
+        host_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        host_box.pack_start(host_prefix, False, False, 0)
+        host_box.pack_start(host_value, False, False, 0)
+        host_box.set_halign(Gtk.Align.START)
+        details_box.pack_start(host_box, False, False, 0)
 
         # Alias
-        alias_label = Gtk.Label()
-        alias_label.set_markup(f"<span size='small' foreground='#555'>Alias:</span> <span size='small' font_family='monospace'>{GLib.markup_escape_text(profile.alias)}</span>")
-        alias_label.set_halign(Gtk.Align.START)
-        details_box.pack_start(alias_label, False, False, 0)
+        alias_prefix = Gtk.Label()
+        alias_prefix.set_markup("<span size='small'>Alias:</span>")
+        alias_prefix.get_style_context().add_class("profile-detail-label")
+        alias_value = Gtk.Label()
+        alias_value.set_markup(f"<span size='small' font_family='monospace'>{GLib.markup_escape_text(profile.alias)}</span>")
+        alias_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        alias_box.pack_start(alias_prefix, False, False, 0)
+        alias_box.pack_start(alias_value, False, False, 0)
+        alias_box.set_halign(Gtk.Align.START)
+        details_box.pack_start(alias_box, False, False, 0)
 
         # SSH Key status
         has_key = os.path.exists(profile.ssh_key_path)
         key_status = Gtk.Label()
         if has_key:
-            key_status.set_markup("<span size='small' foreground='#2eb390'>\u26bf Key</span>")
+            key_status.set_markup("<span size='small'>\u26bf Key</span>")
+            key_status.get_style_context().add_class("key-ok")
         else:
-            key_status.set_markup("<span size='small' foreground='#cc5555'>\u26bf No key</span>")
+            key_status.set_markup("<span size='small'>\u26bf No key</span>")
+            key_status.get_style_context().add_class("key-missing")
         key_status.set_halign(Gtk.Align.START)
         details_box.pack_start(key_status, False, False, 0)
 
@@ -121,7 +136,9 @@ class ProfileDialog(Gtk.Dialog):
 
             save_btn = Gtk.Button(label="Save")
             save_btn.get_style_context().add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            save_btn.set_sensitive(False)
             save_btn.connect("clicked", self._on_save)
+            save_btn.set_can_default(True)
             header_bar.pack_end(save_btn)
 
             cancel_btn = Gtk.Button(label="Cancel")
@@ -129,11 +146,14 @@ class ProfileDialog(Gtk.Dialog):
             header_bar.pack_start(cancel_btn)
 
             header_bar.show_all()
+            self._save_btn = save_btn
         else:
             # Fallback: use standard dialog buttons
             self.add_button("Cancel", Gtk.ResponseType.CANCEL)
             save_btn = self.add_button("Save", Gtk.ResponseType.OK)
             save_btn.get_style_context().add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            save_btn.set_sensitive(False)
+            self._save_btn = save_btn
             self.connect("response", self._on_dialog_response)
 
         # Content area
@@ -211,6 +231,21 @@ class ProfileDialog(Gtk.Dialog):
 
         content.show_all()
 
+        # Connect validation on name/email changes
+        self.name_entry.connect("changed", self._validate_form)
+        self.email_entry.connect("changed", self._validate_form)
+        # Trigger initial validation (enables Save if editing existing profile)
+        self._validate_form()
+
+        # Enter activates Save (Fix 12)
+        self.set_default(self._save_btn)
+
+    def _validate_form(self, *args):
+        """Enable Save only when name and email are filled."""
+        name = self.name_entry.get_text().strip()
+        email = self.email_entry.get_text().strip()
+        self._save_btn.set_sensitive(bool(name and email))
+
     def _on_save(self, button):
         name = self.name_entry.get_text().strip()
         email = self.email_entry.get_text().strip()
@@ -218,16 +253,6 @@ class ProfileDialog(Gtk.Dialog):
         alias = self.alias_entry.get_text().strip() or None
 
         if not name or not email:
-            dialog = Gtk.MessageDialog(
-                parent=self,
-                flags=Gtk.DialogFlags.MODAL,
-                message_type=Gtk.MessageType.ERROR,
-                buttons=Gtk.ButtonsType.OK,
-                text="Validation Error",
-            )
-            dialog.format_secondary_text("Name and Email are required fields.")
-            dialog.run()
-            dialog.destroy()
             return
 
         self.result = {
@@ -257,8 +282,51 @@ class MainWindow(Gtk.ApplicationWindow):
         self._setup_keyboard_shortcuts()
         self._load_profiles()
 
+    def _setup_css(self):
+        """Setup theme-aware CSS classes."""
+        css = b"""
+        .profile-active-dot {
+            color: @success_color;
+        }
+        .profile-detail-label {
+            color: @theme_fg_color;
+            opacity: 0.55;
+        }
+        .key-ok {
+            color: @success_color;
+        }
+        .key-missing {
+            color: @error_color;
+        }
+        .help-text {
+            color: @theme_fg_color;
+            opacity: 0.55;
+        }
+        .toast-bar {
+            border-radius: 9999px;
+            padding: 6px 16px;
+            margin: 12px;
+        }
+        .toast-bar.error {
+            background: @error_color;
+            color: white;
+        }
+        .pill {
+            border-radius: 9999px;
+            padding: 8px 24px;
+        }
+        """
+        provider = Gtk.CssProvider()
+        provider.load_from_data(css)
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            provider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION,
+        )
+
     def _setup_ui(self):
         """Setup the user interface."""
+        self._setup_css()
         self.set_default_size(800, 500)
         self.set_border_width(0)
         self.set_position(Gtk.WindowPosition.CENTER)
@@ -269,10 +337,10 @@ class MainWindow(Gtk.ApplicationWindow):
         header_bar.set_title("Git Profile Switcher")
         header_bar.set_subtitle("Manage your Git identities")
 
-        # Left side: Add button
-        add_btn = Gtk.Button(label="Add")
+        # Left side: Add button (icon-only per HIG)
+        add_btn = Gtk.Button()
+        add_btn.set_image(Gtk.Image.new_from_icon_name("list-add-symbolic", Gtk.IconSize.BUTTON))
         add_btn.set_tooltip_text("Add new profile (Ctrl+N)")
-        add_btn.get_style_context().add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
         add_btn.connect("clicked", self._on_add)
         header_bar.pack_start(add_btn)
 
@@ -280,12 +348,19 @@ class MainWindow(Gtk.ApplicationWindow):
         menu_btn = Gtk.MenuButton()
         menu_icon = Gtk.Image.new_from_icon_name("open-menu-symbolic", Gtk.IconSize.BUTTON)
         menu_btn.add(menu_icon)
-        menu_btn.set_tooltip_text("Menu")
+        menu_btn.set_tooltip_text("Main Menu")
 
         # Build hamburger menu
+        import_section = Gio.Menu()
+        import_section.append("Import from SSH Config", "win.import-ssh-config")
+        import_section.append("Import from Git Aliases", "win.import-git-aliases")
+
+        about_section = Gio.Menu()
+        about_section.append("About Git Profile Switcher", "win.about")
+
         hamburger_menu = Gio.Menu()
-        hamburger_menu.append("Import from SSH Config", "win.import-ssh-config")
-        hamburger_menu.append("Import from Git Aliases", "win.import-git-aliases")
+        hamburger_menu.append_section(None, import_section)
+        hamburger_menu.append_section(None, about_section)
 
         menu_btn.set_menu_model(hamburger_menu)
         header_bar.pack_end(menu_btn)
@@ -307,37 +382,39 @@ class MainWindow(Gtk.ApplicationWindow):
         main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add(main_box)
 
-        # Status bar
-        self.status_revealer = Gtk.Revealer()
-        self.status_revealer.set_property("margin-start", 12)
-        self.status_revealer.set_property("margin-end", 12)
-        self.status_revealer.set_property("margin-top", 6)
-        self.status_revealer.set_property("margin-bottom", 6)
-
-        status_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        status_bar.get_style_context().add_class("app-notification")
-        status_bar.set_property("margin", 0)
-
-        self.status_label = Gtk.Label()
-        self.status_label.set_ellipsize(Pango.EllipsizeMode.END)
-        self.status_label.set_halign(Gtk.Align.START)
-        status_bar.pack_start(self.status_label, True, True, 0)
-
-        close_status = Gtk.Button()
-        close_status.add(Gtk.Image.new_from_icon_name("window-close-symbolic", Gtk.IconSize.MENU))
-        close_status.get_style_context().add_class("flat")
-        close_status.connect("clicked", lambda _: self.status_revealer.set_reveal_child(False))
-        status_bar.pack_end(close_status, False, False, 0)
-
-        self.status_revealer.add(status_bar)
-        main_box.pack_start(self.status_revealer, False, False, 0)
+        # Overlay wraps the scrolled window so the toast floats over it
+        overlay = Gtk.Overlay()
+        main_box.pack_start(overlay, True, True, 0)
 
         # Scrolled window for list
         scrolled = Gtk.ScrolledWindow()
         scrolled.set_property("margin", 12)
         scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scrolled.get_style_context().add_class("frame")
-        main_box.pack_start(scrolled, True, True, 0)
+        overlay.add(scrolled)
+
+        # Toast bar (positioned at bottom-center via overlay)
+        self.status_revealer = Gtk.Revealer()
+        self.status_revealer.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)
+        self.status_revealer.set_halign(Gtk.Align.CENTER)
+        self.status_revealer.set_valign(Gtk.Align.END)
+
+        self.status_bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        self.status_bar.get_style_context().add_class("app-notification")
+        self.status_bar.get_style_context().add_class("toast-bar")
+
+        self.status_label = Gtk.Label()
+        self.status_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.status_bar.pack_start(self.status_label, True, True, 0)
+
+        close_status = Gtk.Button()
+        close_status.add(Gtk.Image.new_from_icon_name("window-close-symbolic", Gtk.IconSize.MENU))
+        close_status.get_style_context().add_class("flat")
+        close_status.connect("clicked", lambda _: self.status_revealer.set_reveal_child(False))
+        self.status_bar.pack_end(close_status, False, False, 0)
+
+        self.status_revealer.add(self.status_bar)
+        overlay.add_overlay(self.status_revealer)
 
         # Profile list
         self.list_box = Gtk.ListBox()
@@ -345,6 +422,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.list_box.set_header_func(self._list_header_func)
         self.list_box.connect("row-activated", self._on_row_activated)
         self.list_box.connect("button-press-event", self._on_button_press)
+        self.list_box.connect("popup-menu", self._on_popup_menu)
         scrolled.add(self.list_box)
 
         # Help text at bottom
@@ -357,12 +435,13 @@ class MainWindow(Gtk.ApplicationWindow):
 
         help_label = Gtk.Label()
         help_label.set_markup(
-            "<span size='small' foreground='#777'>"
+            "<span size='small'>"
             "Double-click to edit \u2022 Right-click for actions \u2022 "
             "Ctrl+N to add \u2022 Delete to remove"
             "</span>"
         )
         help_label.set_halign(Gtk.Align.START)
+        help_label.get_style_context().add_class("help-text")
         help_bar.pack_start(help_label, True, True, 0)
 
         main_box.pack_start(help_bar, False, False, 0)
@@ -387,6 +466,11 @@ class MainWindow(Gtk.ApplicationWindow):
         import_git_action.connect("activate", self._on_import_git_aliases)
         self.add_action(import_git_action)
 
+        # About
+        about_action = Gio.SimpleAction.new("about", None)
+        about_action.connect("activate", self._on_about)
+        self.add_action(about_action)
+
     def _setup_keyboard_shortcuts(self):
         """Setup keyboard shortcuts."""
         accel_group = Gtk.AccelGroup()
@@ -407,6 +491,14 @@ class MainWindow(Gtk.ApplicationWindow):
         # Delete - Delete selected profile
         key, mod = Gtk.accelerator_parse("Delete")
         accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE, lambda *_: self._on_delete_selected())
+
+        # Ctrl+W - Close window
+        key, mod = Gtk.accelerator_parse("<Control>w")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE, lambda *_: self.close())
+
+        # Ctrl+Q - Quit application
+        key, mod = Gtk.accelerator_parse("<Control>q")
+        accel_group.connect(key, mod, Gtk.AccelFlags.VISIBLE, lambda *_: self.get_application().quit())
 
     def _list_header_func(self, row, before):
         """Add headers between list items."""
@@ -438,12 +530,18 @@ class MainWindow(Gtk.ApplicationWindow):
 
             empty_label = Gtk.Label()
             empty_label.set_markup("<span size='large'>No profiles yet</span>")
-            empty_label.get_style_context().add_class(Gtk.STYLE_CLASS_DIM_LABEL)
             empty_box.pack_start(empty_label, False, False, 0)
 
-            empty_hint = Gtk.Label(label="Click 'Add' to create your first Git profile")
+            empty_hint = Gtk.Label(label="Create a profile to manage your Git identities")
             empty_hint.get_style_context().add_class(Gtk.STYLE_CLASS_DIM_LABEL)
             empty_box.pack_start(empty_hint, False, False, 0)
+
+            add_profile_btn = Gtk.Button(label="Add Profile")
+            add_profile_btn.get_style_context().add_class(Gtk.STYLE_CLASS_SUGGESTED_ACTION)
+            add_profile_btn.get_style_context().add_class("pill")
+            add_profile_btn.set_halign(Gtk.Align.CENTER)
+            add_profile_btn.connect("clicked", self._on_add)
+            empty_box.pack_start(add_profile_btn, False, False, 0)
 
             empty_box.show_all()
             self.list_box.add(empty_box)
@@ -464,10 +562,11 @@ class MainWindow(Gtk.ApplicationWindow):
 
     def _show_status(self, message, error=False):
         """Show status message."""
+        bar_ctx = self.status_bar.get_style_context()
         if error:
-            self.status_label.get_style_context().add_class("error")
+            bar_ctx.add_class("error")
         else:
-            self.status_label.get_style_context().remove_class("error")
+            bar_ctx.remove_class("error")
         self.status_label.set_text(message)
         self.status_revealer.set_reveal_child(True)
 
@@ -476,18 +575,8 @@ class MainWindow(Gtk.ApplicationWindow):
 
     # ── Context menu ──────────────────────────────────────────────────
 
-    def _on_button_press(self, widget, event):
-        """Handle right-click on the list box to show context menu."""
-        if event.button != 3:  # Right-click only
-            return False
-
-        # Find which row was clicked
-        row = self.list_box.get_row_at_y(int(event.y))
-        if not row or not isinstance(row, ProfileRow):
-            return False
-
-        self.list_box.select_row(row)
-        profile = row.profile
+    def _build_context_menu(self, profile):
+        """Build the context menu for a profile."""
         has_key = os.path.exists(profile.ssh_key_path)
 
         menu = Gtk.Menu()
@@ -534,8 +623,41 @@ class MainWindow(Gtk.ApplicationWindow):
         menu.append(item_export)
 
         menu.show_all()
-        menu.popup_at_pointer(event)
+        return menu
+
+    def _show_context_menu(self, profile, event=None):
+        """Show context menu for a profile. Uses pointer for mouse, widget for keyboard."""
+        menu = self._build_context_menu(profile)
+        if event is not None:
+            menu.popup_at_pointer(event)
+        else:
+            row = self.list_box.get_selected_row()
+            if row:
+                menu.popup_at_widget(row, Gdk.Gravity.CENTER, Gdk.Gravity.CENTER, None)
+            else:
+                menu.popup_at_pointer(None)
+
+    def _on_button_press(self, widget, event):
+        """Handle right-click on the list box to show context menu."""
+        if event.button != 3:  # Right-click only
+            return False
+
+        # Find which row was clicked
+        row = self.list_box.get_row_at_y(int(event.y))
+        if not row or not isinstance(row, ProfileRow):
+            return False
+
+        self.list_box.select_row(row)
+        self._show_context_menu(row.profile, event)
         return True
+
+    def _on_popup_menu(self, widget):
+        """Handle keyboard context menu (Shift+F10 / Menu key)."""
+        profile = self._get_selected_profile()
+        if profile:
+            self._show_context_menu(profile)
+            return True
+        return False
 
     # ── Profile actions ───────────────────────────────────────────────
 
@@ -595,6 +717,7 @@ class MainWindow(Gtk.ApplicationWindow):
         dialog.add_button("Cancel", Gtk.ResponseType.CANCEL)
         delete_btn = dialog.add_button("Delete", Gtk.ResponseType.OK)
         delete_btn.get_style_context().add_class(Gtk.STYLE_CLASS_DESTRUCTIVE_ACTION)
+        dialog.set_default_response(Gtk.ResponseType.CANCEL)
 
         response = dialog.run()
         dialog.destroy()
@@ -768,6 +891,23 @@ class MainWindow(Gtk.ApplicationWindow):
             self._show_status(f"Mapped {updated} profile(s) from git aliases")
         else:
             self._show_status("No matching aliases found")
+
+    # ── About ────────────────────────────────────────────────────────
+
+    def _on_about(self, action, param):
+        """Show the About dialog."""
+        about = Gtk.AboutDialog(
+            transient_for=self,
+            modal=True,
+            program_name="Git Profile Switcher",
+            version="1.1.0",
+            license_type=Gtk.License.MIT_X11,
+            website="https://github.com/jslquintero/git-profile-switcher",
+            website_label="GitHub Repository",
+            comments="Manage your Git identities with ease.",
+        )
+        about.run()
+        about.destroy()
 
     # ── Refresh ───────────────────────────────────────────────────────
 
