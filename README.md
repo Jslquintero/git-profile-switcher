@@ -9,30 +9,61 @@ A simple Tkinter GUI to manage multiple Git profiles on Linux. It lets you:
 - Copy the public key to paste into GitHub/GitLab
 - Export SSH private keys to backup or transfer
 - See which profile is currently active
+- **NEW: System tray icon for quick profile switching**
 
 ### Requirements (Fedora)
 
 - Python 3.9+
 - Tkinter
+- PyGObject (for tray icon)
 
-Install Tkinter on Fedora:
+Install on Fedora:
 
 ```bash
-sudo dnf install -y python3-tkinter
+sudo dnf install -y python3-tkinter python3-pyobject python3-gobject libappindicator-gtk3
 ```
 
-Optional: create a virtualenv (not required):
+Install on Debian/Ubuntu:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+sudo apt-get install -y python3-tk python3-gi gir1.2-appindicator3-0.1
 ```
 
 ### Run
 
+Run the terminal UI (default):
 ```bash
 python3 main.py
+```
+
+Run the GUI window:
+```bash
+python3 -m gps.gui
+```
+
+Run the system tray icon:
+```bash
+python3 main.py --tray
+# or
+python3 -m gps.tray
+```
+
+### Installing the Tray Application
+
+To install the tray application for easy access and autostart:
+
+```bash
+./install-tray.sh
+```
+
+This will:
+1. Install required system dependencies
+2. Create a desktop entry in `~/.local/share/applications/`
+3. Install the application icon
+
+To enable autostart on login:
+```bash
+ln -s ~/.local/share/applications/git-profile-switcher-tray.desktop ~/.config/autostart/
 ```
 
 ### How it works
@@ -61,3 +92,4 @@ Host <alias>
 - After creating a profile, click "Copy Public Key" and add it to GitHub/GitLab.
 - You can use the alias in remotes, e.g. `git@my-github-alias:owner/repo.git`.
 - Deleting a profile removes its SSH config block and key files.
+- The tray icon shows the active profile's alias and allows quick switching.
