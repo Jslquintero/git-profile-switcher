@@ -900,7 +900,7 @@ class MainWindow(Gtk.ApplicationWindow):
             transient_for=self,
             modal=True,
             program_name="Git Profile Switcher",
-            version="1.1.0",
+            version="1.1.1",
             license_type=Gtk.License.MIT_X11,
             website="https://github.com/jslquintero/git-profile-switcher",
             website_label="GitHub Repository",

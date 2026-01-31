@@ -357,10 +357,9 @@ class TrayIcon:
     def _on_manage_profiles(self, _widget):
         """Open the profile management GUI in a separate process."""
         try:
-            # Use subprocess to avoid blocking the tray icon
-            # Run GUI via -c flag to import and execute
+            main_py = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "main.py")
             subprocess.Popen(
-                [sys.executable, "-c", "from gps.gtk_gui import run_app; run_app()"],
+                [sys.executable, main_py, "--gui"],
                 start_new_session=True,
             )
         except Exception as e:

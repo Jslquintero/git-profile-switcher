@@ -1,5 +1,5 @@
 Name:           git-profile-switcher
-Version:        1.1.0
+Version:        1.1.1
 Release:        1%{?dist}
 Summary:        Manage multiple Git profiles from the system tray
 
@@ -63,6 +63,9 @@ fi
 update-desktop-database %{_datadir}/applications &>/dev/null || :
 
 %changelog
+* Sat Jan 31 2026 Jose Lopez <jose@localhost> - 1.1.1-1
+- Fix "Manage Profiles" not opening GUI from system tray
+
 * Sat Jan 31 2026 Jose Lopez <jose@localhost> - 1.1.0-1
 - Theme-aware styling (dark/light mode support)
 - Floating toast notifications
