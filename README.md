@@ -1,103 +1,95 @@
-## Git Profile Switcher
+# Git Profile Switcher
 
-A GTK3 application to manage multiple Git profiles on Linux. It lets you:
+A GTK3 application for managing multiple Git profiles on Linux.
+Runs as a system tray icon by default and provides a full management window for detailed operations.
 
-- Create profiles with name/email and an SSH key
-- Import existing SSH keys from files
-- Write per-profile SSH alias blocks into `~/.ssh/config`
-- Switch the active global Git profile with one click
-- Copy the public key to paste into GitHub/GitLab
-- Export SSH private keys to backup or transfer
-- See which profile is currently active
-- System tray icon for quick profile switching
+## Features
 
-### Requirements
+- **Profile management** — create, edit, and delete profiles (name, email, Git host, SSH alias)
+- **SSH key handling** — generate ed25519 keys, import existing keys from files, export keys for backup
+- **SSH config integration** — automatically writes per-profile `Host` blocks in `~/.ssh/config`
+- **One-click switching** — sets `user.name`, `user.email`, and `core.sshCommand` globally
+- **System tray** — shows the active profile and allows quick switching via menu
+- **Desktop notifications** — notifies on profile switch
+- **Import** — bulk-import profiles from `~/.ssh/config` or existing git aliases
+- **Clipboard** — copy the public key for pasting into GitHub/GitLab
 
-- Python 3.9+
-- PyGObject (GTK3 bindings)
-- AppIndicator3 (system tray support)
+## Installation
 
-Install on Fedora:
+### RPM (Fedora / RHEL)
 
+```bash
+./build-rpm.sh
+sudo dnf install ~/rpmbuild/RPMS/noarch/git-profile-switcher-1.0.0-*.noarch.rpm
+```
+
+After installing, `git-profile-switcher` is available system-wide and appears in your application menu.
+
+### Manual (any distro)
+
+Install the system dependencies first:
+
+**Fedora:**
 ```bash
 sudo dnf install -y python3-gobject libappindicator-gtk3
 ```
 
-Install on Debian/Ubuntu:
-
+**Debian / Ubuntu:**
 ```bash
 sudo apt-get install -y python3-gi gir1.2-appindicator3-0.1
 ```
 
-### Run
-
-Launch the system tray icon (default):
-```bash
-python3 main.py
-```
-
-Launch the GTK3 management window:
-```bash
-python3 main.py --gui
-```
-
-Show help:
-```bash
-python3 main.py --help
-```
-
-### Installing the Tray Application
-
-To install the tray application for easy access and autostart:
+Then run the install script to set up the desktop entry and icon:
 
 ```bash
 ./install-tray.sh
 ```
 
-This will:
-1. Install required system dependencies
-2. Create a desktop entry in `~/.local/share/applications/`
-3. Install the application icon
+## Usage
 
-To enable autostart on login:
-```bash
-ln -s ~/.local/share/applications/git-profile-switcher-tray.desktop ~/.config/autostart/
+```
+git-profile-switcher [OPTION]
+
+Options:
+  -g, --gui     Launch the GTK3 management window
+  -t, --tray    Launch the system tray icon (default)
+  -h, --help    Show this help message and exit
 ```
 
-### RPM Package
+The system tray icon is the default mode. Use `--gui` to open the full management window directly.
 
-Build an RPM package for Fedora/RHEL:
+### Autostart on login
 
 ```bash
-./build-rpm.sh
+mkdir -p ~/.config/autostart
+ln -s /usr/share/applications/git-profile-switcher.desktop ~/.config/autostart/
 ```
 
-The resulting RPM will be in `~/rpmbuild/RPMS/noarch/`.
+## How it works
 
-### How it works
+Profiles are stored in `~/.config/git-profile-switcher/profiles.json`.
 
-- Profiles are stored in `~/.config/git-profile-switcher/profiles.json`.
-- SSH keys are created in `~/.ssh/id_ed25519_<profile-slug>`.
-- SSH config blocks are managed inside `~/.ssh/config` between markers like:
+Each profile gets an ed25519 SSH key at `~/.ssh/id_ed25519_<alias>` and a corresponding
+block in `~/.ssh/config`:
 
 ```
 # gps-begin: <alias>
 Host <alias>
   HostName github.com
   User git
-  IdentityFile ~/.ssh/id_ed25519_<profile-slug>
+  IdentityFile ~/.ssh/id_ed25519_<alias>
   IdentitiesOnly yes
 # gps-end: <alias>
 ```
 
-- Switching the active profile updates global Git config:
-  - `user.name`
-  - `user.email`
-  - `core.sshCommand` (sets the identity file globally)
+Switching the active profile updates the global Git config:
 
-### Notes
+- `user.name`
+- `user.email`
+- `core.sshCommand` (points to the profile's identity file)
 
-- After creating a profile, click "Copy Public Key" and add it to GitHub/GitLab.
-- You can use the alias in remotes, e.g. `git@my-github-alias:owner/repo.git`.
-- Deleting a profile removes its SSH config block and key files.
-- The tray icon shows the active profile's alias and allows quick switching.
+You can use the SSH alias in remotes, e.g. `git@my-alias:owner/repo.git`.
+
+## License
+
+MIT
