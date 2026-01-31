@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Git Profile Switcher
+Comment=Switch between Git profiles from the system tray
+Exec=python3 -m gps.tray
+Icon=git-profile-switcher
+Terminal=false
+Categories=Development;Utility;GTK;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
